@@ -14,6 +14,7 @@ from deps import get_db, get_current_user
 from database import Base, engine, SessionLocal
 from models import User, Position
 from auth import hash_password, verify_password, create_access_token
+from wallet import router as wallet_router
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Throb Trading API")

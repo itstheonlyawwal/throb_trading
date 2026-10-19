@@ -26,7 +26,8 @@ class ApiService {
   static String _detailOf(dynamic data, int status) {
     final detail = data is Map ? data ['detail'] : null;
     if (detail is String) return detail;
-    if (detail is List && detail.isEmpty && detail.first is Map) {
+    if (detail is List && detail.isNotEmpty && detail.first is Map) {
+      final first = detail.first as Map;
       return (detail.first['message'] ?? 'Invalid input').toString();
     }
     return 'Request failed ($status)';
@@ -66,8 +67,7 @@ class ApiService {
       data = jsonDecode(response.body);
     } catch (_) {
       throw ApiExpcetion(
-          'unexpected reply from server (status ${response
-              .statusCode}). Check the server URL.');
+          'unexpected reply from server (status ${response.statusCode}). Check the server URL.');
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) return data;
@@ -138,6 +138,29 @@ static Future<double> getBalance() async {
     final data = await _request('GET', '/balance', auth: true);
     return ((data as Map<String, dynamic>)['balance'] as num).toDouble();
 }
+
+// ------------- Deposit / Withdrawal / History (NEW) ---------------
+
+  /// Creates a pending deposit. The balance only changes once an admin approves it.
+  static Future<Map<String, dynamic>> deposit(double amount) async {
+    final data = await _request('POST', '/deposits',
+        auth: true, body: {'amount': amount});
+    return data as Map<String, dynamic>;
+  }
+
+  /// Holds the amount and creates a pending withdrawal for admin approval.
+  /// Throws ApiExpcetion('Insufficient funds') if the balance is too low.
+  static Future<Map<String, dynamic>> withdraw(double amount) async {
+    final data = await _request('POST', '/withdrawals',
+        auth: true, body: {'amount': amount});
+    return data as Map<String, dynamic>;
+  }
+
+  /// Each item: id, type, amount, status, note, created_at
+  static Future<List<Map<String, dynamic>>> getTransactions() async {
+    final data = await _request('GET', '/transactions', auth: true);
+    return (data as List).cast<Map<String, dynamic>>();
+  }
 }
 
 

@@ -111,7 +111,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
 
     String? error;
     if (address.isEmpty) {
-      error = 'Enter your destination wallet address.';
+      error = 'Enter your destination wallet.py address.';
     } else if (!_networks[_network]!.hasMatch(address)) {
       error = 'That address is not valid for this network.';
     } else if (amount == null || amount <= 0) {
@@ -308,7 +308,7 @@ class _WithdrawPageState extends State<WithdrawPage> {
                         autocorrect: false,
                         enableSuggestions: false,
                         decoration: _fieldDecoration(
-                            hint: 'Paste your wallet address'),
+                            hint: 'Paste your wallet.py address'),
                       ),
                       SizedBox(height: 24),
 

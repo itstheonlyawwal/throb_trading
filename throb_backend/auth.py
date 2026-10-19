@@ -1,16 +1,25 @@
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt, JWTError
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
+
+from database import get_db
+from models import User
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("36e68a93ecc5686cd93e6fe7d5af285ff580184165b1e6b3c0e1bf9de64a3da2")
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY is missing. Add it to your .env file.")
+
 ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+bearer_scheme = HTTPBearer()
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -31,3 +40,14 @@ def create_access_token(data: dict):
             return int(payload["sub"])
         except (JWTError, KeyError, ValueError):
             raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+            def get_current_user(
+                creds: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+                db: Session = Depends(get_db),
+            ) -> User:
+                """Use as: user: User = Depends(get_current_user)"""
+                user_id = decode_token(creds.credentials)
+                user = db.get(User, user_id)
+                if not user:
+                    raise HTTPException(status_code=401, detail="User not found")
+                return user
