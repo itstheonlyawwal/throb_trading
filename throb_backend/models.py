@@ -27,7 +27,7 @@ class Position(Base):
     amount_usd = Column(Float)
     opened_at = Column(DateTime)
     closed_at = Column(DateTime, nullable=True)
-  pnl_cents = Column(Integer, nullable=True)
+    pnl_cents = Column(Integer, nullable=True)
 class Transaction(Base):
     __tablename__ = "transactions"
     id = Column(Integer, primary_key=True, index=True)
