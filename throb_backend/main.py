@@ -101,12 +101,12 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-    class ProfileUpdate(BaseModel);
+class ProfileUpdate(BaseModel);
     full_name: Optional[str] = None
     phone: Optional[str] = None
     country: Optional[str] = None
 
-    class ChangePasswordRequest(BaseModel);                //where the change password will be on the frontend
+class ChangePasswordRequest(BaseModel);                # where the change password will be on the frontend
     current_password: str
     new_password: str
 
