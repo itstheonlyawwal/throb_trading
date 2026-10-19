@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:thrub_trading/signals_page.dart';
+import 'profile_page.dart';
+import 'signals_page.dart';
 import 'refer_page.dart';
-
 import 'login_page.dart';
 import 'withdraw_page.dart';
 
@@ -124,7 +124,10 @@ class MorePage extends StatelessWidget {
                       context,
                       Icons.person_outline,
                       'Profile',
-                      () => _showComingSoon(context, 'Profile'),
+                      () => Navigator.push(
+                        context,
+                          MaterialPageRoute(builder: (context) => ProfilePage()),
+                      ),
                     ),
                     _buildTile(context, Icons.logout, 'Log Out', () {
                       Navigator.pushAndRemoveUntil(
