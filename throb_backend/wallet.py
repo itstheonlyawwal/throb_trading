@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from auth import get_current_user
+from deps import get_current_user
 from database import get_db
 from models import Position, Transaction, User
 
