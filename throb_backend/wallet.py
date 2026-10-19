@@ -1,4 +1,3 @@
-t · PY
 """
 wallet.py  ->  put this file in throb_backend/ (next to main.py).
 
