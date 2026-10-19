@@ -101,12 +101,12 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-class ProfileUpdate(BaseModel);
+class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     country: Optional[str] = None
 
-class ChangePasswordRequest(BaseModel);                # where the change password will be on the frontend
+class ChangePasswordRequest(BaseModel):                # where the change password will be on the frontend
     current_password: str
     new_password: str
 
@@ -133,45 +133,45 @@ def home():
 @app.post("/signup")
 def signup(data: SignupRequest, db: Session = Depends(get_db)):
      email = data.email.strip().lower()
-        username = data.username.strip().lower()
+     username = data.username.strip().lower()
 
-        if not EMAIL_RE.match(email):
+     if not EMAIL_RE.match(email):
             raise HTTPException(status_code=400, detail="Enter a valid email address")
-        if not USERNAME_RE.match(username):
+     if not USERNAME_RE.match(username):
             raise HTTPException(
                 status_code=400,
                 detail="Username must be 3-20 characters: lowercase letters, numbers or underscore",
             )
-        check_password_rules(data.password)
+     check_password_rules(data.password)
 
-        if db.query(User).filter(User.email == email).first():
+     if db.query(User).filter(User.email == email).first():
             raise HTTPException(status_code=400, detail="Email already registered")
-        if db.query(User).filter(User.username == username).first():
+     if db.query(User).filter(User.username == username).first():
             raise HTTPException(status_code=400, detail="Username already taken")
 
-        referred_by = None
-        code = (data.invitation_code or "").strip().lower()
-        if code:
+     referred_by = None
+     code = (data.invitation_code or "").strip().lower()
+     if code:
             referrer = db.query(User).filter(User.username == code).first()
             if not referrer:
                 raise HTTPException(status_code=400, detail="Invalid invitation code")
             referred_by = referrer.username
 
-    user = User(
+     user = User(
         email=data.email,
         username=data.username,
         hashed_password=hash_password(data.password),
     )
-    db.add(user)
+     db.add(user)
      try:
-            db.commit()
-        except IntegrityError:
+         db.commit()
+     except IntegrityError:
             db.rollback()
             raise HTTPException(status_code=400, detail="Email or username already in use")
-        db.refresh(user)
+     db.refresh(user)
 
-    token = create_access_token({"sub": str(user.id)})
-    return {"token": token, "username": user.username, "user_id": user.id}
+     token = create_access_token({"sub": str(user.id)})
+     return {"token": token, "username": user.username, "user_id": user.id}
 
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
@@ -254,13 +254,13 @@ def get_balance(user: User = Depends(get_current_user), db: Session = Depends(ge
 # ---------- Position (trade) routes ----------
 
 @app.post("/positions")
-def open_position(data: PositionRequest, db: Session = Depends(get_db, user: User = Depends(get_current_user)):
+def open_position(data: PositionRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
 
-  side = data.side.upper()
-      if side not in ("BUY", "SELL"):
-          raise HTTPException(status_code=400, detail="Side must be BUY or SELL")
-      if data.entry_price <= 0 or data.amount_usd <= 0:
-          raise HTTPException(status_code=400, detail="Price and amount must be positive")
+    side = data.side.upper()
+    if side not in ("BUY", "SELL"):
+        raise HTTPException(status_code=400, detail="Side must be BUY or SELL")
+    if data.entry_price <= 0 or data.amount_usd <= 0:
+        raise HTTPException(status_code=400, detail="Price and amount must be positive")
 
     position = Position(
         user_id=data.user_id,
