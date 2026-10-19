@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User
-
+from main import get_current_user
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
