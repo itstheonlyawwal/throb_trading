@@ -4,6 +4,7 @@ import 'main_shell.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'user_session.dart';
+import 'api_error.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -57,14 +58,19 @@ class _LoginPageState extends State<LoginPage> {
       final response = await http.post(
         Uri.parse('https://throb-backend.onrender.com/login'), // see note below about this URL
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
-      );
+        body: jsonEncode({
+          'email': email,
+          'password': password
+        }),
+      )
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+          .timeout(const Duration(seconds: 60));
+
+      final data = tryDecode(response.body);
+
+      if (response.statusCode == 200 && data != null) {
         UserSession.instance.username = data['username'];
-        UserSession.instance.token =
-            data['token']; // add this field to UserSession
+        UserSession.instance.token = data['token'];
 
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -72,12 +78,13 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (context) => MainShell()),
         );
       } else {
-        final data = jsonDecode(response.body);
-        setState(() => _error = data['detail'] ?? 'Invalid email or password.');
+        if (!mounted) return;
+        setState(() => _error = messageForResponse(
+            response.statusCode, data, 'Could not log you in.'));
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'DEBUG ERROR: $e');                                                     //Something went wrong. Please try again.
+      setState(() => _error = messageForException(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
