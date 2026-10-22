@@ -56,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://throb-backend.onrender.com/login'), // see note below about this URL
+        Uri.parse('https://throb-trading.onrender.com/login'), // see note below about this URL
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,

@@ -61,7 +61,7 @@ class _SignupPageState extends State<SignupPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://throb-backend.onrender.com/signup'), // same URL rule as login
+        Uri.parse('https://throb-trading.onrender.com/signup'), // same URL rule as login
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
