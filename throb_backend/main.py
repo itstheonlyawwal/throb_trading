@@ -24,8 +24,6 @@ USERNAME_RE = re.compile(r"^[a-z0-9_]{3,20}$")
 PHONE_RE = re.compile(r"^[+\d\s\-()]{7,20}$")
 
 
-
-
 # ---------- Helpers ----------
 
 def user_to_dict(user: User) -> dict:
@@ -36,9 +34,18 @@ def user_to_dict(user: User) -> dict:
         "full_name": user.full_name,
         "phone": user.phone,
         "country": user.country,
-        "referred_by": user.referred_by,
+        "referred_by": user.reffered_by,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
+
+
+def position_pnl(p: Position) -> float:
+    if p.close_price is None or not p.entry_price:
+        return 0.0
+    change = (p.close_price - p.entry_price) / p.entry_price
+    direction = 1 if p.side == "BUY" else -1
+    return p.amount_usd * change * direction
+
 
 def position_to_dict(p: Position) -> dict:
     return {
@@ -53,12 +60,6 @@ def position_to_dict(p: Position) -> dict:
         "pnl": round(position_pnl(p), 2),
     }
 
-def position_pnl(p: Position) -> float:
-    if p.close_price is None or not p.entry_price:
-        return 0.0
-    change = (p.close_price - p.entry_price) / p.entry_price
-    direction = 1 if p.side == "BUY" else -1
-    return p.amount_usd * change * direction
 
 def check_password_rules(password: str):
     if len(password) < 6:
@@ -83,21 +84,24 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+
 class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     country: Optional[str] = None
 
-class ChangePasswordRequest(BaseModel):                # where the change password will be on the frontend
+
+class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
 
+
 class PositionRequest(BaseModel):
-    user_id: int
     symbol: str
     side: str
     entry_price: float
     amount_usd: float
+
 
 class ClosePositionRequest(BaseModel):
     close_price: float
@@ -114,54 +118,56 @@ def home():
 
 @app.post("/signup")
 def signup(data: SignupRequest, db: Session = Depends(get_db)):
-     email = data.email.strip().lower()
-     username = data.username.strip().lower()
+    email = data.email.strip().lower()
+    username = data.username.strip().lower()
 
-     if not EMAIL_RE.match(email):
-            raise HTTPException(status_code=400, detail="Enter a valid email address")
-     if not USERNAME_RE.match(username):
-            raise HTTPException(
-                status_code=400,
-                detail="Username must be 3-20 characters: lowercase letters, numbers or underscore",
-            )
-     check_password_rules(data.password)
+    if not EMAIL_RE.match(email):
+        raise HTTPException(status_code=400, detail="Enter a valid email address")
+    if not USERNAME_RE.match(username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username must be 3-20 characters: lowercase letters, numbers or underscore",
+        )
+    check_password_rules(data.password)
 
-     if db.query(User).filter(User.email == email).first():
-            raise HTTPException(status_code=400, detail="Email already registered")
-     if db.query(User).filter(User.username == username).first():
-            raise HTTPException(status_code=400, detail="Username already taken")
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    if db.query(User).filter(User.username == username).first():
+        raise HTTPException(status_code=400, detail="Username already taken")
 
-     referred_by = None
-     code = (data.invitation_code or "").strip().lower()
-     if code:
-            referrer = db.query(User).filter(User.username == code).first()
-            if not referrer:
-                raise HTTPException(status_code=400, detail="Invalid invitation code")
-            referred_by = referrer.username
+    referred_by = None
+    code = (data.invitation_code or "").strip().lower()
+    if code:
+        referrer = db.query(User).filter(User.username == code).first()
+        if not referrer:
+            raise HTTPException(status_code=400, detail="Invalid invitation code")
+        referred_by = referrer.username
 
-     user = User(
-        email=data.email,
-        username=data.username,
+    user = User(
+        email=email,
+        username=username,
         hashed_password=hash_password(data.password),
-        full_name=data.full_name,
-        phone=data.phone,
-        country=data.country,
-        reffered_by=data.invitation_code,
+        full_name=(data.full_name or "").strip() or None,
+        phone=(data.phone or "").strip() or None,
+        country=(data.country or "").strip() or None,
+        reffered_by=referred_by,
     )
-     db.add(user)
-     try:
-         db.commit()
-     except IntegrityError:
-            db.rollback()
-            raise HTTPException(status_code=400, detail="Email or username already in use")
-     db.refresh(user)
+    db.add(user)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Email or username already in use")
+    db.refresh(user)
 
-     token = create_access_token({"sub": str(user.id)})
-     return {"token": token, "username": user.username, "user_id": user.id}
+    token = create_access_token({"sub": str(user.id)})
+    return {"token": token, "username": user.username, "user_id": user.id}
+
 
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == data.email).first()
+    email = data.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
@@ -175,13 +181,14 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 def get_profile(user: User = Depends(get_current_user)):
     return user_to_dict(user)
 
+
 @app.put("/profile")
 def update_profile(
     data: ProfileUpdate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    updates = data.model_dump(exclude_unset=True)  # only fields the app actually sent
+    updates = data.model_dump(exclude_unset=True)
 
     if "full_name" in updates:
         name = (updates["full_name"] or "").strip()
@@ -201,19 +208,10 @@ def update_profile(
             raise HTTPException(status_code=400, detail="Country name is too long")
         user.country = country or None
 
-             user = User(
-                email=email,
-                username=username,
-                hashed_password=hash_password(data.password),
-                full_name=(data.full_name or "").strip() or None,
-                phone=(data.phone or "").strip() or None,
-                country=(data.country or "").strip() or None,
-                reffered_by=referred_by,
-            )
-
     db.commit()
     db.refresh(user)
     return user_to_dict(user)
+
 
 @app.post("/profile/change-password")
 def change_password(
@@ -247,11 +245,15 @@ def get_balance(user: User = Depends(get_current_user), db: Session = Depends(ge
     realized = sum(position_pnl(p) for p in closed)
     return {"balance": round(realized, 2), "open_positions": open_count}
 
+
 # ---------- Position (trade) routes ----------
 
 @app.post("/positions")
-def open_position(data: PositionRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-
+def open_position(
+    data: PositionRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     side = data.side.upper()
     if side not in ("BUY", "SELL"):
         raise HTTPException(status_code=400, detail="Side must be BUY or SELL")
@@ -259,9 +261,9 @@ def open_position(data: PositionRequest, db: Session = Depends(get_db), user: Us
         raise HTTPException(status_code=400, detail="Price and amount must be positive")
 
     position = Position(
-        user_id=data.user_id,
+        user_id=user.id,
         symbol=data.symbol,
-        side=data.side,
+        side=side,
         entry_price=data.entry_price,
         amount_usd=data.amount_usd,
         opened_at=datetime.utcnow(),
@@ -271,31 +273,40 @@ def open_position(data: PositionRequest, db: Session = Depends(get_db), user: Us
     db.refresh(position)
     return position_to_dict(position)
 
-    @app.get("/positions/{user_id}")
-    def list_positions(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-        positions = (
-            db.query(Position)
-            .filter(Position.user_id == user.id)
-            .order_by(Position.opened_at.desc())
-            .all()
-        )
-        return [position_to_dict(p) for p in positions]
 
-    @app.post("/positions/{position_id}/close")
-    def close_position(position_id: int, data: ClosePositionRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db),
-    ):
-        position = (
-            db.query(Position)
-            .filter(Position.id == position_id, Position.user_id == user.id)
-            .first()
-        )
-        if not position:
-            raise HTTPException(status_code=404, detail="Position not found")
-        if position.closed_at is not None:
-            raise HTTPException(status_code=400, detail="Position already closed")
+@app.get("/positions/{user_id}")
+def list_positions(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    positions = (
+        db.query(Position)
+        .filter(Position.user_id == user.id)
+        .order_by(Position.opened_at.desc())
+        .all()
+    )
+    return [position_to_dict(p) for p in positions]
 
-        position.close_price = data.close_price
-        position.closed_at = datetime.utcnow()
-        db.commit()
-        db.refresh(position)
-        return position_to_dict(position)
+
+@app.post("/positions/{position_id}/close")
+def close_position(
+    position_id: int,
+    data: ClosePositionRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    position = (
+        db.query(Position)
+        .filter(Position.id == position_id, Position.user_id == user.id)
+        .first()
+    )
+    if not position:
+        raise HTTPException(status_code=404, detail="Position not found")
+    if position.closed_at is not None:
+        raise HTTPException(status_code=400, detail="Position already closed")
+
+    position.close_price = data.close_price
+    position.closed_at = datetime.utcnow()
+    db.commit()
+    db.refresh(position)
+    return position_to_dict(position)
