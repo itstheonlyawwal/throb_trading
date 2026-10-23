@@ -17,7 +17,7 @@ from models import User, Position
 from auth import hash_password, verify_password, create_access_token
 from wallet import settle_position
 
-Base.metadata.drop_all(bind=engine)   # TEMPORARY: remove after one deploy
+# Base.metadata.drop_all(bind=engine)   # TEMPORARY: remove after one deploy
 Base.metadata.create_all(bind=engine)
 
 _admin_email = os.getenv("ADMIN_EMAIL", "abdulawwalforex@gmail.com").strip().lower()
