@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
@@ -11,14 +10,12 @@ from pydantic import BaseModel
 import admin
 import wallet
 from deps import get_db, get_current_user
-from database import Base, engine, SessionLocal
+from database import Base, engine
 from models import User, Position
 from auth import hash_password, verify_password, create_access_token
-from wallet import router as wallet_router
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Throb Trading API")
-bearer_scheme = HTTPBearer()
 app.include_router(wallet.router)
 app.include_router(admin.router)
 
@@ -27,25 +24,6 @@ USERNAME_RE = re.compile(r"^[a-z0-9_]{3,20}$")
 PHONE_RE = re.compile(r"^[+\d\s\-()]{7,20}$")
 
 
-
-# ---------- Dependencies ----------
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-def get_current_user(
-    creds: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: Session = Depends(get_db),
-) -> User:
-    user_id = decode_token(creds.credentials)
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User no longer exists")
-    return user
 
 
 # ---------- Helpers ----------
@@ -95,7 +73,11 @@ class SignupRequest(BaseModel):
     email: str
     username: str
     password: str
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    country: Optional[str] = None
     invitation_code: Optional[str] = None
+
 
 class LoginRequest(BaseModel):
     email: str
@@ -161,6 +143,10 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
         email=data.email,
         username=data.username,
         hashed_password=hash_password(data.password),
+        full_name=data.full_name,
+        phone=data.phone,
+        country=data.country,
+        reffered_by=data.invitation_code,
     )
      db.add(user)
      try:
@@ -214,6 +200,16 @@ def update_profile(
         if len(country) > 56:
             raise HTTPException(status_code=400, detail="Country name is too long")
         user.country = country or None
+
+             user = User(
+                email=email,
+                username=username,
+                hashed_password=hash_password(data.password),
+                full_name=(data.full_name or "").strip() or None,
+                phone=(data.phone or "").strip() or None,
+                country=(data.country or "").strip() or None,
+                reffered_by=referred_by,
+            )
 
     db.commit()
     db.refresh(user)

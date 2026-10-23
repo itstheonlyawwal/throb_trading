@@ -18,6 +18,9 @@ class _SignupPageState extends State<SignupPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _invitationController = TextEditingController();
+  final _fullNameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _countryController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _error;
@@ -32,6 +35,9 @@ class _SignupPageState extends State<SignupPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _invitationController.dispose();
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    _countryController.dispose();
     super.dispose();
   }
 
@@ -39,8 +45,13 @@ class _SignupPageState extends State<SignupPage> {
     final username = _usernameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
+    final fullName = _fullNameController.text.trim();
+    final phone = _phoneController.text.trim();
+    final country = _countryController.text.trim();
+    final invitationCode = _invitationController.text.trim();
 
-    if (username.isEmpty || email.isEmpty || password.isEmpty) {
+
+    if (fullName.isEmpty || username.isEmpty || email.isEmpty || password.isEmpty || phone.isEmpty || country.isEmpty) {
       setState(() => _error = 'Please fill in all required fields.');
       return;
     }
@@ -51,6 +62,15 @@ class _SignupPageState extends State<SignupPage> {
     }
     if (password.length < 6) {
       setState(() => _error = 'Password must be at least 6 characters long.');
+      return;
+    }
+    if (phone.length != 10) {
+      setState(() => _error = 'Phone number must be 10 digits long.');
+      return;
+    }
+    if (!RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(username)) {
+      setState(() => _error =
+      'Username must be 3-20 characters: lowercase letters, numbers or underscore.');
       return;
     }
 
@@ -67,6 +87,10 @@ class _SignupPageState extends State<SignupPage> {
           'email': email,
           'username': username,
           'password': password,
+          'full_name': fullName,
+          'phone': phone,
+          'country': country,
+          'invitation_code': invitationCode,
         }),
       )
       .timeout(const Duration(seconds: 60));
@@ -231,6 +255,37 @@ class _SignupPageState extends State<SignupPage> {
                         ),
                         SizedBox(height: 16),
                       ],
+
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildLabel('Full Name'),
+                      ),
+                      _buildField(
+                        controller: _fullNameController,
+                        hint: 'Enter your full name',
+                      ),
+                      SizedBox(height: 20),
+
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildLabel('Phone Number'),
+                      ),
+                      _buildField(
+                        controller: _phoneController,
+                        hint: 'Enter your phone number',
+                        keyboardType: TextInputType.phone,
+                      ),
+                      SizedBox(height: 20),
+
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _buildLabel('Country'),
+                      ),
+                      _buildField(
+                        controller: _countryController,
+                        hint: 'Enter your country',
+                      ),
+                      SizedBox(height: 20),
 
                       Align(
                         alignment: Alignment.centerLeft,

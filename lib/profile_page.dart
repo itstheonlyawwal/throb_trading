@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart';
+import 'api_error.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -58,6 +59,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _loading = true;
       _loadError = null;
     });
+
     try {
       final p = await ApiService.getProfile();
       if (!mounted) return;
