@@ -13,7 +13,6 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-bearer_scheme = HTTPBearer()
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
