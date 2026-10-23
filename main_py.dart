@@ -297,3 +297,61 @@ position.closed_at = datetime.utcnow()
 db.commit()
 db.refresh(position)
 return position_to_dict(position)
+
+
+
+#---------- Balance ----------
+
+@app.get("/balance")
+def get_balance(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+closed = (
+db.query(Position)
+    .filter(Position.user_id == user.id, Position.closed_at.isnot(None))
+    .all()
+)
+open_count = (
+db.query(Position)
+    .filter(Position.user_id == user.id, Position.closed_at.is_(None))
+    .count()
+)
+realized = sum(position_pnl(p) for p in closed)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@app.post("/positions/{position_id}/close")
+def close_position(
+position_id: int,
+data: ClosePositionRequest,
+user: User = Depends(get_current_user),
+db: Session = Depends(get_db),
+):
+position = (
+db.query(Position)
+    .filter(Position.id == position_id, Position.user_id == user.id)
+    .first()
+)
+if not position:
+raise HTTPException(status_code=404, detail="Position not found")
+if position.closed_at is not None:
+raise HTTPException(status_code=400, detail="Position already closed")
+
+position.close_price = data.close_price
+position.closed_at = datetime.utcnow()
+db.commit()
+db.refresh(position)
+return position_to_dict(position)
+

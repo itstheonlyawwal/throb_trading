@@ -2,7 +2,7 @@ import os
 import re
 from datetime import datetime
 from typing import Optional
-from database import SessionaLocal
+from database import SessionLocal
 
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
