@@ -1,9 +1,10 @@
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from deps import get_db, get_current_user
+from deps import get_db, require_admin
 from models import User, Position
+
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
