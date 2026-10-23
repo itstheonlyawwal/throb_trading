@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 from typing import Optional
 from database import SessionLocal
+from sqlalchemy import func
 
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -259,6 +260,17 @@ def open_position(
         if data.amount_usd > user.balance:
             raise HTTPException(status_code=400, detail="Insufficient funds")
 
+    open_total = (
+        db.query(func.coalesce(func.sum(Position.amount_usd), 0.0))
+        .filter(Position.user_id == user.id, Position.closed_at.is_(None))
+        .scalar()
+    )
+    available = user.balance - open_total
+    if data.amount_usd > available:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient balance. Available: ${max(available, 0):.2f}",
+        )
     position = Position(
         user_id=user.id,
         symbol=data.symbol,
