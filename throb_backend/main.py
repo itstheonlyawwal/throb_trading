@@ -1,6 +1,8 @@
+import os
 import re
 from datetime import datetime
 from typing import Optional
+from database import SessionaLocal
 
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -13,9 +15,20 @@ from deps import get_db, get_current_user
 from database import Base, engine
 from models import User, Position
 from auth import hash_password, verify_password, create_access_token
+from wallet import settle_position
 
-# Base.metadata.drop_all(bind=engine)   # TEMPORARY: remove after one deploy
+Base.metadata.drop_all(bind=engine)   # TEMPORARY: remove after one deploy
 Base.metadata.create_all(bind=engine)
+
+_admin_email = os.getenv("ADMIN_EMAIL", "abdulawwalforex@gmail.com").strip().lower()
+if _admin_email:
+    _db = SessionLocal()
+    _u = _db.query(User).filter(User.email == _admin_email).first()
+    if _u and not _u.is_admin:
+        _u.is_admin = True
+        _db.commit()
+    _db.close()
+
 app = FastAPI(title="Throb Trading API")
 app.include_router(wallet.router)
 app.include_router(admin.router)
@@ -229,23 +242,6 @@ def change_password(
     return {"message": "Password updated"}
 
 
-# ---------- Balance ----------
-
-@app.get("/balance")
-def get_balance(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    closed = (
-        db.query(Position)
-        .filter(Position.user_id == user.id, Position.closed_at.isnot(None))
-        .all()
-    )
-    open_count = (
-        db.query(Position)
-        .filter(Position.user_id == user.id, Position.closed_at.is_(None))
-        .count()
-    )
-    realized = sum(position_pnl(p) for p in closed)
-    return {"balance": round(realized, 2), "open_positions": open_count}
-
 
 # ---------- Position (trade) routes ----------
 
@@ -260,6 +256,8 @@ def open_position(
         raise HTTPException(status_code=400, detail="Side must be BUY or SELL")
     if data.entry_price <= 0 or data.amount_usd <= 0:
         raise HTTPException(status_code=400, detail="Price and amount must be positive")
+        if data.amount_usd > user.balance:
+            raise HTTPException(status_code=400, detail="Insufficient funds")
 
     position = Position(
         user_id=user.id,
@@ -310,4 +308,5 @@ def close_position(
     position.closed_at = datetime.utcnow()
     db.commit()
     db.refresh(position)
+    wallet.settle_position(db, position)
     return position_to_dict(position)

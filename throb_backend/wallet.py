@@ -19,8 +19,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from deps import get_current_user
-from database import get_db
+from deps import get_current_user, get_db, require_admin
 from models import Position, Transaction, User
 
 router = APIRouter()
@@ -30,12 +29,6 @@ router = APIRouter()
 
 def money(x: float) -> float:
     return round(float(x), 2)
-
-
-def require_admin(user: User = Depends(get_current_user)) -> User:
-    if not user.is_admin:
-        raise HTTPException(status_code=403, detail="Admin only")
-    return user
 
 
 class DepositIn(BaseModel):

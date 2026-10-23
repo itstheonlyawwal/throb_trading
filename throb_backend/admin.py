@@ -1,4 +1,4 @@
-import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -6,18 +6,6 @@ from deps import get_db, get_current_user
 from models import User, Position
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-ADMIN_EMAILS = {
-    e.strip().lower()
-    for e in os.getenv("ADMIN_EMAILS", "").split(",")
-    if e.strip()
-}
-
-
-def require_admin(user: User = Depends(get_current_user)) -> User:
-    if getattr(user, "is_admin", False) or user.email.lower() in ADMIN_EMAILS:
-        return user
-    raise HTTPException(status_code=403, detail="Admin only")
 
 
 @router.get("/users")

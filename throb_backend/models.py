@@ -13,8 +13,8 @@ class User(Base):
     country = Column(String, nullable=True)
     reffered_by = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-is_admin = Column(Boolean, default=False, nullable=False)
-balance = Column(Float, default=0.0, nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
+    balance = Column(Float, default=0.0, nullable=False)
 
 class Position(Base):
     __tablename__ = "positions"
