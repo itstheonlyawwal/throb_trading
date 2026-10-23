@@ -144,3 +144,6 @@ raise HTTPException(status_code=401, detail="Invalid email or password")
 token = create_access_token({"sub": str(user.id)})
 return {"token": token, "username": user.username, "user_id": user.id}
 
+
+
+

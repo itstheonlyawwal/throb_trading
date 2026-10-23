@@ -14,6 +14,7 @@ from database import Base, engine
 from models import User, Position
 from auth import hash_password, verify_password, create_access_token
 
+Base.metadata.drop_all(bind=engine)   # TEMPORARY: remove after one deploy
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Throb Trading API")
 app.include_router(wallet.router)
